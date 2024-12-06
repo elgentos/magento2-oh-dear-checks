@@ -1,0 +1,26 @@
+{
+  "name": "elgentos/magento2-oh-dear-checks",
+  "description": "Magento 2 module for Oh Dear checks integration.",
+  "type": "magento2-module",
+  "license": "MIT",
+  "require": {
+    "vendic/magento2-oh-dear": "^1.0",
+    "vendic/magento2-oh-dear-elasticsuite": "^1.0"
+  },
+  "autoload": {
+    "files": [
+      "registration.php"
+    ],
+    "psr-4": {
+      "Elgentos\\OhDearChecks\\": ""
+    }
+  },
+  "extra": {
+    "map": [
+      [
+        "*",
+        "Elgentos/OhDearChecks"
+      ]
+    ]
+  }
+}
