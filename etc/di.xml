@@ -4,7 +4,7 @@
     <type name="Vendic\OhDear\Api\CheckListInterface">
         <arguments>
             <argument name="checks" xsi:type="array">
-                <item name="cpu_load" xsi:type="object">Vendic\OhDear\Checks\CpuLoad</item>
+                <item name="sentry_connection" xsi:type="object">Elgentos\OhDearChecks\Checks\SentryConnection</item>
             </argument>
         </arguments>
     </type>
