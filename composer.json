@@ -13,13 +13,5 @@
     "psr-4": {
       "Elgentos\\OhDearChecks\\": ""
     }
-  },
-  "extra": {
-    "map": [
-      [
-        "*",
-        "Elgentos/OhDearChecks"
-      ]
-    ]
   }
 }
