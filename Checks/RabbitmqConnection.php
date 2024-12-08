@@ -76,7 +76,7 @@ class RabbitmqConnection implements CheckInterface
                     return CheckStatus::STATUS_FAILED;
                 }
             } catch (\Exception $e) {
-                if (str_contains($e->getMessage(), 'after 0.01337 sec')) {
+                if (str_contains($e->getMessage(), 'after ' . $connectionTimeout . ' sec')) {
                     return CheckStatus::STATUS_OK;
                 }
                 $this->error = $e->getMessage();
