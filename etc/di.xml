@@ -5,6 +5,7 @@
         <arguments>
             <argument name="checks" xsi:type="array">
                 <item name="sentry_connection" xsi:type="object">Elgentos\OhDearChecks\Checks\SentryConnection</item>
+                <item name="rabbitmq_connection" xsi:type="object">Elgentos\OhDearChecks\Checks\RabbitmqConnection</item>
             </argument>
         </arguments>
     </type>
