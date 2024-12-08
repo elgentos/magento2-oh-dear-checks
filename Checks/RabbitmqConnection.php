@@ -26,8 +26,8 @@ class RabbitmqConnection implements CheckInterface
         /** @var CheckResultInterface $checkResult */
 
         $checkResult = $this->checkResultFactory->create();
-        $checkResult->setName('rabbitmq');
-        $checkResult->setLabel('Rabbitmq');
+        $checkResult->setName('rabbitmq_connection');
+        $checkResult->setLabel('Rabbitmq Connection');
         $checkResult->setMeta($deploymentConfig->get('queue'));
 
         if ($this->checkIsRabbitmqConfigured($deploymentConfig) === CheckStatus::STATUS_OK) {
