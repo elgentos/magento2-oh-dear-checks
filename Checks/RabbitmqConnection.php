@@ -28,7 +28,7 @@ class RabbitmqConnection implements CheckInterface
         $checkResult = $this->checkResultFactory->create();
         $checkResult->setName('rabbitmq_connection');
         $checkResult->setLabel('Rabbitmq Connection');
-        $checkResult->setMeta($deploymentConfig->get('queue'));
+        $checkResult->setMeta($deploymentConfig->get('queue') ?? []);
 
         if ($this->checkIsRabbitmqConfigured($deploymentConfig) === CheckStatus::STATUS_OK) {
             $checkResult->setStatus(CheckStatus::STATUS_OK);
@@ -53,7 +53,8 @@ class RabbitmqConnection implements CheckInterface
         $connectionTimeout = 0.01337;
 
         if (
-            !empty($deploymentConfig->get('queue/amqp'))
+            $deploymentConfig->get('queue')
+            && !empty($deploymentConfig->get('queue/amqp'))
             && $host
             && $port
             && $user
