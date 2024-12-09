@@ -49,7 +49,7 @@ class RabbitmqConnection implements CheckInterface
         $port = $deploymentConfig->get('queue/amqp/port');
         $user = $deploymentConfig->get('queue/amqp/user');
         $password = $deploymentConfig->get('queue/amqp/password');
-        $vhost = $deploymentConfig->get('queue/amqp/vhost');
+        $vhost = $deploymentConfig->get('queue/amqp/virtualhost');
         $connectionTimeout = 0.01337;
 
         if (
