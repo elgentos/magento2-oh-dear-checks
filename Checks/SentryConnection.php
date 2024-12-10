@@ -25,7 +25,7 @@ class SentryConnection implements CheckInterface
         $checkResult = $this->checkResultFactory->create();
         $checkResult->setName('sentry_connection');
         $checkResult->setLabel('Sentry connection');
-        $checkResult->setMeta($deploymentConfig->get('sentry'));
+        $checkResult->setMeta($deploymentConfig->get('sentry') ?? []);
 
         if ($this->checkisSentryConfigured($deploymentConfig) === false) {
             $checkResult->setStatus(CheckStatus::STATUS_FAILED);
