@@ -4,7 +4,7 @@
   "type": "magento2-module",
   "license": "MIT",
   "require": {
-    "vendic/magento2-oh-dear-checks": "^1.0"
+    "vendic/magento2-oh-dear-checks": "^1.5"
   },
   "autoload": {
     "files": [
