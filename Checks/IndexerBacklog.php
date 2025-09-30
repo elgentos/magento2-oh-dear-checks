@@ -3,7 +3,6 @@
 namespace Elgentos\OhDearChecks\Checks;
 
 use Magento\Framework\Indexer\IndexerRegistry;
-use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory as ProductCollectionFactory;
 use Magento\Framework\App\DeploymentConfig;
 use Vendic\OhDear\Api\CheckInterface;
 use Vendic\OhDear\Api\Data\CheckResultInterface;
@@ -14,18 +13,16 @@ class IndexerBacklog implements CheckInterface
 {
     // Default indexer IDs to check (can be overridden in env.php)
     private const DEFAULT_INDEXER_IDS = [
-        'catalog_product_price',
-        'catalog_category_product',
-        'catalogsearch_fulltext',
-        'catalog_product_attribute',
-        'cataloginventory_stock',
-        'inventory',
-        'catalogrule_rule',
-        'catalogrule_product',
-        'customer_grid',
         'design_config_grid',
-        'targetrule_product_rule',
-        'targetrule_rule_product',
+        'customer_grid',
+        'catalog_category_product',
+        'catalog_product_category',
+        'catalogrule_rule',
+        'catalog_product_attribute',
+        'catalog_product_price',
+        'catalogrule_product',
+        'cataloginventory_stock',
+        'catalogsearch_fulltext',
     ];
 
     // Default thresholds for determining check status (can be overridden in env.php)
@@ -34,7 +31,6 @@ class IndexerBacklog implements CheckInterface
 
     public function __construct(
         private IndexerRegistry $indexerRegistry,
-        private ProductCollectionFactory $productCollectionFactory,
         private CheckResultFactory $checkResultFactory,
         private DeploymentConfig $deploymentConfig,
     ) {
@@ -47,7 +43,6 @@ class IndexerBacklog implements CheckInterface
         $checkResult->setLabel('Indexer Backlog');
 
         $backlogData = $this->getAllIndexerBacklogs();
-        $totalProducts = $this->getTotalProducts();
 
         // Calculate statistics and determine per-indexer status
         $maxBacklog = 0;
@@ -93,7 +88,6 @@ class IndexerBacklog implements CheckInterface
         // Set metadata
         $checkResult->setMeta([
             'indexers' => $backlogData,
-            'total_products' => $totalProducts,
             'max_backlog' => $maxBacklog,
             'total_backlog' => $totalBacklog,
             'indexers_with_backlog' => $indexersWithBacklog,
@@ -133,7 +127,6 @@ class IndexerBacklog implements CheckInterface
     private function getAllIndexerBacklogs(): array
     {
         $backlogData = [];
-        $totalProducts = $this->getTotalProducts();
         $indexerIds = $this->getIndexerIds();
 
         foreach ($indexerIds as $indexerId) {
@@ -151,16 +144,9 @@ class IndexerBacklog implements CheckInterface
 
                 $backlog = $changelog->getVersion() - $state->getVersionId();
 
-                // Calculate percentage for product-related indexers
-                $percentage = null;
-                if ($totalProducts > 0 && $this->isProductRelatedIndexer($indexerId)) {
-                    $percentage = round(($backlog / $totalProducts) * 100, 2);
-                }
-
                 $backlogData[$indexerId] = [
                     'title' => $indexer->getTitle(),
                     'backlog' => max(0, $backlog), // Ensure non-negative
-                    'percentage' => $percentage,
                     'status' => $indexer->getStatus(),
                 ];
             } catch (\Exception $e) {
@@ -170,41 +156,6 @@ class IndexerBacklog implements CheckInterface
         }
 
         return $backlogData;
-    }
-
-    /**
-     * Get total number of products in the store
-     *
-     * @return int
-     */
-    private function getTotalProducts(): int
-    {
-        try {
-            $collection = $this->productCollectionFactory->create();
-            return $collection->getSize();
-        } catch (\Exception $e) {
-            return 0;
-        }
-    }
-
-    /**
-     * Check if indexer is product-related
-     *
-     * @param string $indexerId
-     * @return bool
-     */
-    private function isProductRelatedIndexer(string $indexerId): bool
-    {
-        $productRelatedIndexers = [
-            'catalog_product_price',
-            'catalog_category_product',
-            'catalogsearch_fulltext',
-            'catalog_product_attribute',
-            'cataloginventory_stock',
-            'inventory',
-        ];
-
-        return in_array($indexerId, $productRelatedIndexers, true);
     }
 
     /**
