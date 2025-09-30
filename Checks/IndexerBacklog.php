@@ -46,19 +46,41 @@ class IndexerBacklog implements CheckInterface
         $checkResult->setName('indexer_backlog');
         $checkResult->setLabel('Indexer Backlog');
 
-        $warningThreshold = $this->getWarningThreshold();
-        $criticalThreshold = $this->getCriticalThreshold();
-
         $backlogData = $this->getAllIndexerBacklogs();
         $totalProducts = $this->getTotalProducts();
 
-        // Calculate statistics
+        // Calculate statistics and determine per-indexer status
         $maxBacklog = 0;
         $totalBacklog = 0;
         $indexersWithBacklog = 0;
+        $worstStatus = CheckStatus::STATUS_OK;
+        $criticalIndexers = [];
+        $warningIndexers = [];
 
         foreach ($backlogData as $indexerId => $data) {
             $backlog = $data['backlog'];
+            $warningThreshold = $this->getWarningThreshold($indexerId);
+            $criticalThreshold = $this->getCriticalThreshold($indexerId);
+
+            // Add threshold info to backlog data
+            $backlogData[$indexerId]['warning_threshold'] = $warningThreshold;
+            $backlogData[$indexerId]['critical_threshold'] = $criticalThreshold;
+
+            // Determine per-indexer status
+            if ($backlog >= $criticalThreshold) {
+                $backlogData[$indexerId]['check_status'] = CheckStatus::STATUS_FAILED;
+                $worstStatus = CheckStatus::STATUS_FAILED;
+                $criticalIndexers[] = $data['title'];
+            } elseif ($backlog >= $warningThreshold) {
+                $backlogData[$indexerId]['check_status'] = CheckStatus::STATUS_WARNING;
+                if ($worstStatus !== CheckStatus::STATUS_FAILED) {
+                    $worstStatus = CheckStatus::STATUS_WARNING;
+                }
+                $warningIndexers[] = $data['title'];
+            } else {
+                $backlogData[$indexerId]['check_status'] = CheckStatus::STATUS_OK;
+            }
+
             if ($backlog > 0) {
                 $indexersWithBacklog++;
                 $totalBacklog += $backlog;
@@ -75,31 +97,27 @@ class IndexerBacklog implements CheckInterface
             'max_backlog' => $maxBacklog,
             'total_backlog' => $totalBacklog,
             'indexers_with_backlog' => $indexersWithBacklog,
-            'warning_threshold' => $warningThreshold,
-            'critical_threshold' => $criticalThreshold,
         ]);
 
-        // Determine status based on backlog size
-        if ($maxBacklog >= $criticalThreshold) {
-            $checkResult->setStatus(CheckStatus::STATUS_FAILED);
+        // Determine overall status based on worst per-indexer status
+        $checkResult->setStatus($worstStatus);
+
+        if ($worstStatus === CheckStatus::STATUS_FAILED) {
             $checkResult->setNotificationMessage(
-                sprintf('Critical indexer backlog detected: %d items in backlog', $maxBacklog)
+                sprintf('Critical backlog in indexer(s): %s', implode(', ', $criticalIndexers))
             );
-            $checkResult->setShortSummary(sprintf('Critical backlog: %d items', $maxBacklog));
-        } elseif ($maxBacklog >= $warningThreshold) {
-            $checkResult->setStatus(CheckStatus::STATUS_WARNING);
+            $checkResult->setShortSummary(sprintf('%d critical indexer(s)', count($criticalIndexers)));
+        } elseif ($worstStatus === CheckStatus::STATUS_WARNING) {
             $checkResult->setNotificationMessage(
-                sprintf('High indexer backlog detected: %d items in backlog', $maxBacklog)
+                sprintf('High backlog in indexer(s): %s', implode(', ', $warningIndexers))
             );
-            $checkResult->setShortSummary(sprintf('High backlog: %d items', $maxBacklog));
+            $checkResult->setShortSummary(sprintf('%d warning indexer(s)', count($warningIndexers)));
         } elseif ($indexersWithBacklog > 0) {
-            $checkResult->setStatus(CheckStatus::STATUS_OK);
             $checkResult->setNotificationMessage(
                 sprintf('%d indexer(s) have backlog but within acceptable range', $indexersWithBacklog)
             );
             $checkResult->setShortSummary(sprintf('%d indexer(s) with minor backlog', $indexersWithBacklog));
         } else {
-            $checkResult->setStatus(CheckStatus::STATUS_OK);
             $checkResult->setNotificationMessage('All indexers are up to date');
             $checkResult->setShortSummary('All indexers up to date');
         }
@@ -208,10 +226,22 @@ class IndexerBacklog implements CheckInterface
     /**
      * Get the warning threshold from configuration or default
      *
+     * @param string|null $indexerId Indexer ID for per-indexer threshold
      * @return int
      */
-    private function getWarningThreshold(): int
+    private function getWarningThreshold(?string $indexerId = null): int
     {
+        // Check for per-indexer threshold first
+        if ($indexerId !== null) {
+            $perIndexerConfig = $this->deploymentConfig->get(
+                'ohdear/Elgentos\OhDearChecks\Checks\IndexerBacklog/thresholds/' . $indexerId . '/warning'
+            );
+            if (is_numeric($perIndexerConfig) && $perIndexerConfig > 0) {
+                return (int) $perIndexerConfig;
+            }
+        }
+
+        // Fall back to global threshold
         $config = $this->deploymentConfig->get('ohdear/Elgentos\OhDearChecks\Checks\IndexerBacklog/warning_threshold');
         
         if (is_numeric($config) && $config > 0) {
@@ -224,10 +254,22 @@ class IndexerBacklog implements CheckInterface
     /**
      * Get the critical threshold from configuration or default
      *
+     * @param string|null $indexerId Indexer ID for per-indexer threshold
      * @return int
      */
-    private function getCriticalThreshold(): int
+    private function getCriticalThreshold(?string $indexerId = null): int
     {
+        // Check for per-indexer threshold first
+        if ($indexerId !== null) {
+            $perIndexerConfig = $this->deploymentConfig->get(
+                'ohdear/Elgentos\OhDearChecks\Checks\IndexerBacklog/thresholds/' . $indexerId . '/critical'
+            );
+            if (is_numeric($perIndexerConfig) && $perIndexerConfig > 0) {
+                return (int) $perIndexerConfig;
+            }
+        }
+
+        // Fall back to global threshold
         $config = $this->deploymentConfig->get('ohdear/Elgentos\OhDearChecks\Checks\IndexerBacklog/critical_threshold');
         
         if (is_numeric($config) && $config > 0) {

@@ -63,10 +63,21 @@ You can disable any check by adding configuration to your `env.php`:
             'catalogsearch_fulltext',
             // ... add or remove indexer IDs as needed
         ],
-        // Optional: customize warning threshold (default: 1000)
+        // Optional: global default thresholds (used when no per-indexer threshold is set)
         'warning_threshold' => 1000,
-        // Optional: customize critical threshold (default: 10000)
-        'critical_threshold' => 10000
+        'critical_threshold' => 10000,
+        // Optional: per-indexer thresholds (override global defaults)
+        'thresholds' => [
+            'catalog_product_price' => [
+                'warning' => 500,
+                'critical' => 5000
+            ],
+            'catalogsearch_fulltext' => [
+                'warning' => 2000,
+                'critical' => 15000
+            ],
+            // ... configure thresholds for specific indexers
+        ]
     ]
 ]
 ```
@@ -74,8 +85,14 @@ You can disable any check by adding configuration to your `env.php`:
 ### Indexer Backlog Configuration Options
 
 - **`indexer_ids`** (array): List of indexer IDs to monitor. If not specified, a default list of 12 common indexers is used.
-- **`warning_threshold`** (int): Backlog size that triggers a WARNING status. Default: 1,000 items.
-- **`critical_threshold`** (int): Backlog size that triggers a FAILED status. Default: 10,000 items.
+- **`warning_threshold`** (int): Global warning threshold. Default: 1,000 items. Used when no per-indexer threshold is configured.
+- **`critical_threshold`** (int): Global critical threshold. Default: 10,000 items. Used when no per-indexer threshold is configured.
+- **`thresholds`** (array): Per-indexer threshold configuration. Each indexer can have its own `warning` and `critical` values that override the global defaults.
+
+**Priority Order:**
+1. Per-indexer threshold (if configured)
+2. Global threshold (if configured)
+3. Default threshold (1,000 for warning, 10,000 for critical)
 
 ## Contributing
 
