@@ -4,6 +4,7 @@ namespace Elgentos\OhDearChecks\Checks;
 
 use Magento\Framework\Indexer\IndexerRegistry;
 use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory as ProductCollectionFactory;
+use Magento\Framework\App\DeploymentConfig;
 use Vendic\OhDear\Api\CheckInterface;
 use Vendic\OhDear\Api\Data\CheckResultInterface;
 use Vendic\OhDear\Api\Data\CheckStatus;
@@ -11,7 +12,8 @@ use Vendic\OhDear\Model\CheckResultFactory;
 
 class IndexerBacklog implements CheckInterface
 {
-    private const INDEXER_IDS = [
+    // Default indexer IDs to check (can be overridden in env.php)
+    private const DEFAULT_INDEXER_IDS = [
         'catalog_product_price',
         'catalog_category_product',
         'catalogsearch_fulltext',
@@ -26,14 +28,15 @@ class IndexerBacklog implements CheckInterface
         'targetrule_rule_product',
     ];
 
-    // Thresholds for determining check status
-    private const WARNING_THRESHOLD = 1000;
-    private const CRITICAL_THRESHOLD = 10000;
+    // Default thresholds for determining check status (can be overridden in env.php)
+    private const DEFAULT_WARNING_THRESHOLD = 1000;
+    private const DEFAULT_CRITICAL_THRESHOLD = 10000;
 
     public function __construct(
         private IndexerRegistry $indexerRegistry,
         private ProductCollectionFactory $productCollectionFactory,
         private CheckResultFactory $checkResultFactory,
+        private DeploymentConfig $deploymentConfig,
     ) {
     }
 
@@ -42,6 +45,9 @@ class IndexerBacklog implements CheckInterface
         $checkResult = $this->checkResultFactory->create();
         $checkResult->setName('indexer_backlog');
         $checkResult->setLabel('Indexer Backlog');
+
+        $warningThreshold = $this->getWarningThreshold();
+        $criticalThreshold = $this->getCriticalThreshold();
 
         $backlogData = $this->getAllIndexerBacklogs();
         $totalProducts = $this->getTotalProducts();
@@ -69,16 +75,18 @@ class IndexerBacklog implements CheckInterface
             'max_backlog' => $maxBacklog,
             'total_backlog' => $totalBacklog,
             'indexers_with_backlog' => $indexersWithBacklog,
+            'warning_threshold' => $warningThreshold,
+            'critical_threshold' => $criticalThreshold,
         ]);
 
         // Determine status based on backlog size
-        if ($maxBacklog >= self::CRITICAL_THRESHOLD) {
+        if ($maxBacklog >= $criticalThreshold) {
             $checkResult->setStatus(CheckStatus::STATUS_FAILED);
             $checkResult->setNotificationMessage(
                 sprintf('Critical indexer backlog detected: %d items in backlog', $maxBacklog)
             );
             $checkResult->setShortSummary(sprintf('Critical backlog: %d items', $maxBacklog));
-        } elseif ($maxBacklog >= self::WARNING_THRESHOLD) {
+        } elseif ($maxBacklog >= $warningThreshold) {
             $checkResult->setStatus(CheckStatus::STATUS_WARNING);
             $checkResult->setNotificationMessage(
                 sprintf('High indexer backlog detected: %d items in backlog', $maxBacklog)
@@ -108,8 +116,9 @@ class IndexerBacklog implements CheckInterface
     {
         $backlogData = [];
         $totalProducts = $this->getTotalProducts();
+        $indexerIds = $this->getIndexerIds();
 
-        foreach (self::INDEXER_IDS as $indexerId) {
+        foreach ($indexerIds as $indexerId) {
             try {
                 $indexer = $this->indexerRegistry->get($indexerId);
 
@@ -178,5 +187,53 @@ class IndexerBacklog implements CheckInterface
         ];
 
         return in_array($indexerId, $productRelatedIndexers, true);
+    }
+
+    /**
+     * Get the list of indexer IDs to check from configuration or defaults
+     *
+     * @return array
+     */
+    private function getIndexerIds(): array
+    {
+        $config = $this->deploymentConfig->get('ohdear/Elgentos\OhDearChecks\Checks\IndexerBacklog/indexer_ids');
+        
+        if (is_array($config) && !empty($config)) {
+            return $config;
+        }
+
+        return self::DEFAULT_INDEXER_IDS;
+    }
+
+    /**
+     * Get the warning threshold from configuration or default
+     *
+     * @return int
+     */
+    private function getWarningThreshold(): int
+    {
+        $config = $this->deploymentConfig->get('ohdear/Elgentos\OhDearChecks\Checks\IndexerBacklog/warning_threshold');
+        
+        if (is_numeric($config) && $config > 0) {
+            return (int) $config;
+        }
+
+        return self::DEFAULT_WARNING_THRESHOLD;
+    }
+
+    /**
+     * Get the critical threshold from configuration or default
+     *
+     * @return int
+     */
+    private function getCriticalThreshold(): int
+    {
+        $config = $this->deploymentConfig->get('ohdear/Elgentos\OhDearChecks\Checks\IndexerBacklog/critical_threshold');
+        
+        if (is_numeric($config) && $config > 0) {
+            return (int) $config;
+        }
+
+        return self::DEFAULT_CRITICAL_THRESHOLD;
     }
 }

@@ -55,10 +55,27 @@ You can disable any check by adding configuration to your `env.php`:
         'enabled' => false
     ],
     'Elgentos\\OhDearChecks\\Checks\\IndexerBacklog' => [
-        'enabled' => false
+        'enabled' => false,
+        // Optional: customize which indexers to check
+        'indexer_ids' => [
+            'catalog_product_price',
+            'catalog_category_product',
+            'catalogsearch_fulltext',
+            // ... add or remove indexer IDs as needed
+        ],
+        // Optional: customize warning threshold (default: 1000)
+        'warning_threshold' => 1000,
+        // Optional: customize critical threshold (default: 10000)
+        'critical_threshold' => 10000
     ]
 ]
 ```
+
+### Indexer Backlog Configuration Options
+
+- **`indexer_ids`** (array): List of indexer IDs to monitor. If not specified, a default list of 12 common indexers is used.
+- **`warning_threshold`** (int): Backlog size that triggers a WARNING status. Default: 1,000 items.
+- **`critical_threshold`** (int): Backlog size that triggers a FAILED status. Default: 10,000 items.
 
 ## Contributing
 
