@@ -53,6 +53,11 @@ This check verifies that HTTP cache hosts (Varnish) are properly configured for 
 - ✅ **OK**: HTTP cache hosts are properly configured
 - ❌ **FAILED**: HTTP cache hosts are not configured or misconfigured
 
+**Metadata Includes:**
+- Configuration status
+- Number of configured hosts
+- List of configured hosts (without sensitive details)
+
 **Example Configuration in env.php:**
 ```php
 'http_cache_hosts' => [
