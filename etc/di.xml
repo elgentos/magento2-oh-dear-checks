@@ -6,6 +6,7 @@
             <argument name="checks" xsi:type="array">
                 <item name="sansec_shield" xsi:type="object">Elgentos\OhDearChecks\Checks\SansecShield</item>
                 <item name="indexer_backlog" xsi:type="object">Elgentos\OhDearChecks\Checks\IndexerBacklog</item>
+                <item name="http_cache_hosts" xsi:type="object">Elgentos\OhDearChecks\Checks\HttpCacheHosts</item>
             </argument>
         </arguments>
     </type>

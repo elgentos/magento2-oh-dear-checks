@@ -42,6 +42,32 @@ This check monitors the backlog size for all scheduled indexers in your Magento 
 - Maximum backlog across all indexers
 - Number of indexers with backlog
 
+### HTTP Cache Hosts Check
+
+This check verifies that HTTP cache hosts (Varnish) are properly configured for cache clearing:
+
+- **Configuration Check**: Verifies that `http_cache_hosts` is configured in `env.php`
+- **Validation**: Ensures at least one host is configured with both `host` and `port` parameters
+
+**Check Results:**
+- ✅ **OK**: HTTP cache hosts are properly configured
+- ❌ **FAILED**: HTTP cache hosts are not configured or misconfigured
+
+**Metadata Includes:**
+- Configuration status
+- Number of configured hosts
+- List of configured hosts (without sensitive details)
+
+**Example Configuration in env.php:**
+```php
+'http_cache_hosts' => [
+    [
+        'host' => '127.0.0.1',
+        'port' => '6081'
+    ]
+]
+```
+
 ## Configuration
 
 You can disable any check by adding configuration to your `env.php`:
@@ -75,6 +101,9 @@ You can disable any check by adding configuration to your `env.php`:
             ],
             // ... configure thresholds for specific indexers
         ]
+    ],
+    'Elgentos\\OhDearChecks\\Checks\\HttpCacheHosts' => [
+        'enabled' => false
     ]
 ]
 ```
