@@ -25,6 +25,26 @@ This check verifies that the Sansec Shield security extension is properly instal
 - ⚠️ **WARNING**: Module is installed and enabled but license key is missing
 - ❌ **FAILED**: Module is not installed or not enabled
 
+### Indexer Backlog Check
+
+This check monitors the backlog size for all scheduled indexers in your Magento store:
+
+- **Backlog Monitoring**: Tracks the number of pending items for each scheduled indexer
+- **Product Percentage**: For product-related indexers, calculates backlog as a percentage of total products
+- **Status Tracking**: Reports the current status of each indexer
+
+**Check Results:**
+- ✅ **OK**: All indexers are up to date or have minimal backlog (< 1,000 items)
+- ⚠️ **WARNING**: High backlog detected (1,000 - 9,999 items)
+- ❌ **FAILED**: Critical backlog detected (≥ 10,000 items)
+
+**Metadata Includes:**
+- Backlog size per indexer
+- Percentage of total products (for product-related indexers)
+- Total products in store
+- Maximum backlog across all indexers
+- Number of indexers with backlog
+
 ## Configuration
 
 You can disable any check by adding configuration to your `env.php`:
@@ -32,6 +52,9 @@ You can disable any check by adding configuration to your `env.php`:
 ```php
 'ohdear' => [
     'Elgentos\\OhDearChecks\\Checks\\SansecShield' => [
+        'enabled' => false
+    ],
+    'Elgentos\\OhDearChecks\\Checks\\IndexerBacklog' => [
         'enabled' => false
     ]
 ]
