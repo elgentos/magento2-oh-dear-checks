@@ -42,6 +42,25 @@ This check monitors the backlog size for all scheduled indexers in your Magento 
 - Maximum backlog across all indexers
 - Number of indexers with backlog
 
+### OPcache Hit Rate Check
+
+This check monitors the PHP OPcache hit rate to ensure optimal performance:
+
+- **Hit Rate Monitoring**: Tracks the OPcache hit rate percentage
+- **Cache Statistics**: Reports hits, misses, and cached scripts
+
+**Check Results:**
+- ✅ **OK**: Hit rate is healthy (≥ 95%)
+- ⚠️ **WARNING**: Hit rate is suboptimal (90% - 94.99%)
+- ❌ **FAILED**: Hit rate is critical (< 90%) or OPcache is not enabled
+
+**Metadata Includes:**
+- Hits count
+- Misses count
+- Blacklist misses count
+- Number of cached scripts
+- Current hit rate percentage
+
 ## Configuration
 
 You can disable any check by adding configuration to your `env.php`:
@@ -75,6 +94,12 @@ You can disable any check by adding configuration to your `env.php`:
             ],
             // ... configure thresholds for specific indexers
         ]
+    ],
+    'Elgentos\\OhDearChecks\\Checks\\OpcacheHitRate' => [
+        'enabled' => false,
+        // Optional: minimum acceptable hit rate thresholds (as percentages)
+        'warning_threshold' => 95.0,   // Warning if hit rate falls below 95%
+        'critical_threshold' => 90.0,  // Critical if hit rate falls below 90%
     ]
 ]
 ```
@@ -90,6 +115,13 @@ You can disable any check by adding configuration to your `env.php`:
 1. Per-indexer threshold (if configured)
 2. Global threshold (if configured)
 3. Default threshold (1,000 for warning, 10,000 for critical)
+
+### OPcache Hit Rate Configuration Options
+
+- **`warning_threshold`** (float): Minimum acceptable hit rate percentage for warning status. Default: 95.0%. If hit rate falls below this value, a warning is triggered.
+- **`critical_threshold`** (float): Minimum acceptable hit rate percentage for critical status. Default: 90.0%. If hit rate falls below this value, a critical alert is triggered.
+
+**Note:** The thresholds represent the minimum acceptable hit rate. Lower values mean worse performance.
 
 ## Contributing
 
