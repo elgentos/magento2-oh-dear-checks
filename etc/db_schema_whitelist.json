@@ -1,0 +1,7 @@
+{
+    "cron_schedule": {
+        "index": {
+            "CRON_SCHEDULE_STATUS_FINISHED_AT": true
+        }
+    }
+}

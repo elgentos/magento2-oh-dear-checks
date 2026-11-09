@@ -7,6 +7,20 @@
                 <item name="sansec_shield" xsi:type="object">Elgentos\OhDearChecks\Checks\SansecShield</item>
                 <item name="indexer_backlog" xsi:type="object">Elgentos\OhDearChecks\Checks\IndexerBacklog</item>
                 <item name="http_cache_hosts" xsi:type="object">Elgentos\OhDearChecks\Checks\HttpCacheHosts</item>
+                <item name="cron" xsi:type="object">Elgentos\OhDearChecks\Checks\Cron</item>
+                <item name="search_engine" xsi:type="object">Elgentos\OhDearChecks\Checks\SearchEngine</item>
+                <item name="session_storage" xsi:type="object">Elgentos\OhDearChecks\Checks\SessionStorage</item>
+                <item name="public_files" xsi:type="object">Elgentos\OhDearChecks\Checks\PublicFiles</item>
+            </argument>
+        </arguments>
+    </type>
+    <!-- Asked in order: the first tester that knows the configured engine decides -->
+    <type name="Elgentos\OhDearChecks\Checks\SearchEngine">
+        <arguments>
+            <argument name="testers" xsi:type="array">
+                <item name="core" xsi:type="object">Elgentos\OhDearChecks\Model\SearchEngine\CoreConnectionTester</item>
+                <item name="amasty" xsi:type="object">Elgentos\OhDearChecks\Model\SearchEngine\AmastyConnectionTester</item>
+                <item name="elasticsuite" xsi:type="object">Elgentos\OhDearChecks\Model\SearchEngine\ElasticsuiteConnectionTester</item>
             </argument>
         </arguments>
     </type>

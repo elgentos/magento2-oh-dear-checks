@@ -4,6 +4,9 @@
     <module name="Elgentos_OhDearChecks">
         <sequence>
             <module name="Vendic_OhDear"/>
+            <module name="Magento_Cron"/>
+            <module name="Magento_Indexer"/>
+            <module name="Magento_AdvancedSearch"/>
         </sequence>
     </module>
 </config>

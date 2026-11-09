@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <!-- Lets the cron check read MAX(finished_at) WHERE status = 'success' from the index instead of scanning the table -->
+    <table name="cron_schedule">
+        <index referenceId="CRON_SCHEDULE_STATUS_FINISHED_AT" indexType="btree">
+            <column name="status"/>
+            <column name="finished_at"/>
+        </index>
+    </table>
+</schema>
