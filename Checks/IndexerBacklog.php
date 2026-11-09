@@ -2,6 +2,7 @@
 
 namespace Elgentos\OhDearChecks\Checks;
 
+use Magento\Framework\Indexer\ConfigInterface as IndexerConfig;
 use Magento\Framework\Indexer\IndexerRegistry;
 use Magento\Framework\App\DeploymentConfig;
 use Vendic\OhDear\Api\CheckInterface;
@@ -9,22 +10,14 @@ use Vendic\OhDear\Api\Data\CheckResultInterface;
 use Vendic\OhDear\Api\Data\CheckStatus;
 use Vendic\OhDear\Model\CheckResultFactory;
 
+/**
+ * Reports invalid indexers and the changelog backlog of scheduled indexers.
+ *
+ * Checks every indexer Magento knows, including those of third-party modules, unless
+ * indexer_ids in env.php limits the list.
+ */
 class IndexerBacklog implements CheckInterface
 {
-    // Default indexer IDs to check (can be overridden in env.php)
-    private const DEFAULT_INDEXER_IDS = [
-        'design_config_grid',
-        'customer_grid',
-        'catalog_category_product',
-        'catalog_product_category',
-        'catalogrule_rule',
-        'catalog_product_attribute',
-        'catalog_product_price',
-        'catalogrule_product',
-        'cataloginventory_stock',
-        'catalogsearch_fulltext',
-    ];
-
     // Default thresholds for determining check status (can be overridden in env.php)
     private const DEFAULT_WARNING_THRESHOLD = 1000;
     private const DEFAULT_CRITICAL_THRESHOLD = 10000;
@@ -33,6 +26,7 @@ class IndexerBacklog implements CheckInterface
         private IndexerRegistry $indexerRegistry,
         private CheckResultFactory $checkResultFactory,
         private DeploymentConfig $deploymentConfig,
+        private IndexerConfig $indexerConfig,
     ) {
     }
 
@@ -42,13 +36,13 @@ class IndexerBacklog implements CheckInterface
         $checkResult->setName('indexer_backlog');
         $checkResult->setLabel('Indexer Backlog');
 
-        $backlogData = $this->getAllIndexerBacklogs();
+        [$backlogData, $invalidIndexers] = $this->collectIndexerData();
 
         // Calculate statistics and determine per-indexer status
         $maxBacklog = 0;
         $totalBacklog = 0;
         $indexersWithBacklog = 0;
-        $worstStatus = CheckStatus::STATUS_OK;
+        $worstStatus = $invalidIndexers ? CheckStatus::STATUS_WARNING : CheckStatus::STATUS_OK;
         $criticalIndexers = [];
         $warningIndexers = [];
 
@@ -88,6 +82,7 @@ class IndexerBacklog implements CheckInterface
         // Set metadata
         $checkResult->setMeta([
             'indexers' => $backlogData,
+            'invalid_indexers' => array_keys($invalidIndexers),
             'max_backlog' => $maxBacklog,
             'total_backlog' => $totalBacklog,
             'indexers_with_backlog' => $indexersWithBacklog,
@@ -96,16 +91,24 @@ class IndexerBacklog implements CheckInterface
         // Determine overall status based on worst per-indexer status
         $checkResult->setStatus($worstStatus);
 
-        if ($worstStatus === CheckStatus::STATUS_FAILED) {
-            $checkResult->setNotificationMessage(
-                sprintf('Critical backlog in indexer(s): %s', implode(', ', $criticalIndexers))
-            );
-            $checkResult->setShortSummary(sprintf('%d critical indexer(s)', count($criticalIndexers)));
-        } elseif ($worstStatus === CheckStatus::STATUS_WARNING) {
-            $checkResult->setNotificationMessage(
-                sprintf('High backlog in indexer(s): %s', implode(', ', $warningIndexers))
-            );
-            $checkResult->setShortSummary(sprintf('%d warning indexer(s)', count($warningIndexers)));
+        $messages = [];
+        $summaries = [];
+        if ($criticalIndexers) {
+            $messages[] = sprintf('Critical backlog in indexer(s): %s', implode(', ', $criticalIndexers));
+            $summaries[] = sprintf('%d critical indexer(s)', count($criticalIndexers));
+        }
+        if ($warningIndexers) {
+            $messages[] = sprintf('High backlog in indexer(s): %s', implode(', ', $warningIndexers));
+            $summaries[] = sprintf('%d warning indexer(s)', count($warningIndexers));
+        }
+        if ($invalidIndexers) {
+            $messages[] = sprintf('Invalid indexer(s): %s', implode(', ', $invalidIndexers));
+            $summaries[] = sprintf('%d invalid indexer(s)', count($invalidIndexers));
+        }
+
+        if ($messages) {
+            $checkResult->setNotificationMessage(implode('. ', $messages));
+            $checkResult->setShortSummary(implode(', ', $summaries));
         } elseif ($indexersWithBacklog > 0) {
             $checkResult->setNotificationMessage(
                 sprintf('%d indexer(s) have backlog but within acceptable range', $indexersWithBacklog)
@@ -120,32 +123,33 @@ class IndexerBacklog implements CheckInterface
     }
 
     /**
-     * Get backlog data for all indexers
+     * Backlog data of scheduled indexers and the titles of invalid indexers, both keyed by indexer ID
      *
-     * @return array
+     * @return array{0: array<string, array>, 1: array<string, string>}
      */
-    private function getAllIndexerBacklogs(): array
+    private function collectIndexerData(): array
     {
         $backlogData = [];
-        $indexerIds = $this->getIndexerIds();
+        $invalidIndexers = [];
 
-        foreach ($indexerIds as $indexerId) {
+        foreach ($this->getIndexerIds() as $indexerId) {
             try {
                 $indexer = $this->indexerRegistry->get($indexerId);
 
-                // Only check scheduled indexers
+                if ($indexer->isInvalid()) {
+                    $invalidIndexers[$indexerId] = (string) $indexer->getTitle();
+                }
+
+                // Only scheduled indexers have a changelog backlog
                 if (!$indexer->isScheduled()) {
                     continue;
                 }
 
                 $view = $indexer->getView();
-                $state = $view->getState();
-                $changelog = $view->getChangelog();
-
-                $backlog = $changelog->getVersion() - $state->getVersionId();
+                $backlog = (int) $view->getChangelog()->getVersion() - (int) $view->getState()->getVersionId();
 
                 $backlogData[$indexerId] = [
-                    'title' => $indexer->getTitle(),
+                    'title' => (string) $indexer->getTitle(),
                     'backlog' => max(0, $backlog), // Ensure non-negative
                     'status' => $indexer->getStatus(),
                 ];
@@ -155,23 +159,23 @@ class IndexerBacklog implements CheckInterface
             }
         }
 
-        return $backlogData;
+        return [$backlogData, $invalidIndexers];
     }
 
     /**
-     * Get the list of indexer IDs to check from configuration or defaults
+     * Get the list of indexer IDs to check from configuration, or every indexer Magento knows
      *
-     * @return array
+     * @return string[]
      */
     private function getIndexerIds(): array
     {
         $config = $this->deploymentConfig->get('ohdear/Elgentos\OhDearChecks\Checks\IndexerBacklog/indexer_ids');
-        
+
         if (is_array($config) && !empty($config)) {
-            return $config;
+            return array_values(array_map('strval', $config));
         }
 
-        return self::DEFAULT_INDEXER_IDS;
+        return array_map('strval', array_keys($this->indexerConfig->getIndexers()));
     }
 
     /**
@@ -194,7 +198,7 @@ class IndexerBacklog implements CheckInterface
 
         // Fall back to global threshold
         $config = $this->deploymentConfig->get('ohdear/Elgentos\OhDearChecks\Checks\IndexerBacklog/warning_threshold');
-        
+
         if (is_numeric($config) && $config > 0) {
             return (int) $config;
         }
@@ -222,7 +226,7 @@ class IndexerBacklog implements CheckInterface
 
         // Fall back to global threshold
         $config = $this->deploymentConfig->get('ohdear/Elgentos\OhDearChecks\Checks\IndexerBacklog/critical_threshold');
-        
+
         if (is_numeric($config) && $config > 0) {
             return (int) $config;
         }
